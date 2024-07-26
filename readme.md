@@ -1,58 +1,111 @@
-# Dev Test
+# Elevator Rest Predictor
 
-## Elevators
-When an elevator is empty and not moving this is known as it's resting floor. 
-The ideal resting floor to be positioned on depends on the likely next floor that the elevator will be called from.
+## Overview
+This project is designed to collect and store meaningful data about elevator usage, specifically to feed a Machine Learning (ML) system that will try to predict the optimal resting floor for an elevator when it's not in use. 
 
-We can build a prediction engine to predict the likely next floor based on historical demand, if we have the data.
+## Our Solution
 
-The goal of this project is to model an elevator and save the data that could later be used to build a prediction engine for which floor is the best resting floor at any time
-- When people call an elevator this is considered a demand
-- When the elevator is vacant and not moving between floors, the current floor is considered its resting floor
-- When the elevator is vacant, it can stay at the current position or move to a different floor
-- The prediction model will determine what is the best floor to rest on
+### Data Collection and Storage
+We record the following data for each elevator call:
+- Timestamp of the call
+- Current floor
+- Destination floor
+- Whether the call is from inside or outside the elevator
+- Whether the elevator was at rest when called
 
+This data structure was chosen because it captures the essential information needed to analyze patterns in elevator usage and predict optimal resting positions.
 
-_The requirement isn't to complete this system but to start building a system that would feed into the training and prediction
-of an ML system_
+### System Integration
+The elevator control system will interact with our API to:
+1. Send information about new elevator calls
+2. Update the elevator's resting state
 
-You will need to talk through your approach, how you modelled the data and why you thought that data was important, provide endpoints to collect the data and 
-a means to store the data. Testing is important and will be used verify your system
+The ML system can then retrieve the relevant data through our API for analysis and prediction. The key insight here is that the most valuable data for determining the optimal resting floor are the calls made when the elevator is already at rest. These calls represent instances where the elevator's current resting position either was or wasn't ideal.
 
-## A note on AI generated code
-This project isn't about writing code, AI can and will do that for you.
-The next step in this process is to talk through your solution and the decisions you made to come to them. It makes for an awkward and rather boring interview reviewing chatgpt's solution.
+By analyzing patterns in these specific calls, the ML system can learn which floors are most frequently requested when the elevator is idle, potentially at different times of day or days of the week. This information is crucial for predicting where the elevator should rest to minimize response times for future calls.
 
-If you use a tool to help you write code, that's fine, but we want to see _your_ thought process.
+To facilitate this, our API provides a way to filter and retrieve only the calls made when the elevator was at rest. This can be done by setting the `at_rest_only` parameter to "true" when calling the `/get_calls` endpoint. For example:
 
-Provided under the chatgpt folder is the response you get back from chat4o. 
-If your intention isn't to complete the project but to get an AI to spec it for you please, feel free to submit this instead of wasting OpenAI's server resources.
+### Business Rules
+Here are the business rules considered for this project:
+- Validation of floor numbers against the building configuration
+- Checking if calls are made within operational hours
 
+The parameters for these rules are configurable via a JSON file.
 
-## Problem statement recap
-This is a domain modeling problem to build a fit for purpose data storage with a focus on ai data ingestion
-- Model the problem into a storage schema (SQL DB schema or whatever you prefer)
-- CRUD some data
-- Add some flair with a business rule or two
-- Have the data in a suitable format to feed to a prediction training algorithm
+## How to Run the System
+1. Initialize the database: `python init_db.py`
+2. Start the server: `python main.py`
 
----
+The API will be available at `http://localhost:5000`.
 
-#### To start
-- Fork this repo and begin from there
-- For your submission, PR into the main repo. We will review it, a offer any feedback and give you a pass / fail if it passes PR
-- Don't spend more than 4 hours on this. Projects that pass PR are paid at the standard hourly rate
+## API Endpoints
 
-#### Marking
-- You will be marked on how well your tests cover the code and how useful they would be in a prod system
-- You will need to provide storage of some sort. This could be as simple as a sqlite or as complicated as a docker container with a migrations file
-- Solutions will be marked against the position you are applying for, a Snr Dev will be expected to have a nearly complete solution and to have thought out the domain and built a schema to fit any issues that could arise 
-A Jr. dev will be expected to provide a basic design and understand how ML systems like to ingest data
+### Record Elevator Call
+- **URL**: `/elevator_call`
+- **Method**: POST
+- **Body**:
+  ```json
+  {
+    "current_floor": "string",
+    "destination_floor": "string",
+    "is_external_call": boolean
+  }
+- **Response**: 201 Call logged and elevator set to busy
 
+### Set Elevator to Rest
+- **URL**: `/elevator_at_rest`
+- **Method**: POST
+- **Body**:
+  ```json
+  {
+    "current_floor": "string"
+  }
+- **Response**: 201 Elevator set to rest
 
-#### Trip-ups from the past
-Below is a list of some things from previous submissions that haven't worked out
-- Built a prediction engine
-- Built a full website with bells and whistles
-- Spent more than the time allowed (you won't get bonus points for creating an intricate solution, we want a fit for purpose solution)
-- Overcomplicated the system mentally and failed to start
+### Retrieve Calls
+- **URL**: `/get_calls`
+- **Method**: GET
+- **Query Parameters**: 
+  - `at_rest_only` (optional): Set to "true" to retrieve only calls made when the elevator was at rest
+- **Response**: 200 OK with JSON array of call data
+
+## Testing
+Run all tests using the command `pytest` in the project root.
+
+Our test suite includes:
+1. Tests for data models
+2. API endpoint tests
+3. Business rule validation tests
+4. A test that generates 200 random elevator calls, filters those made at rest, exports them to CSV, and verifies data integrity and count.
+
+## Project Structure
+- `main.py`: Application entry point
+- `app/`: Core application code
+  - `models.py`: Database models
+  - `routes.py`: API endpoints
+  - `utils.py`: Utility functions
+- `config/`: Configuration files
+- `tests/`: Test suite
+- `init_db.py`: Database initialization script
+
+## Possible Improvements
+- Implement elevator controller logic
+- Enhance data collection:
+  - Track elevator movement direction (up/down)
+  - Monitor elevator capacity
+  - Record door open/close times
+  - Log maintenance events
+- Add support for multiple elevators
+
+## Personal Experience
+
+Working on this project provided valuable experience in modeling a real-world scenario. Identifying the most relevant data for predicting optimal rest floors was particularly challenging and rewarding.
+
+I utilized a Language Learning Model (LLM) extensively during the debugging phase. This tool was crucial in structuring the solution and implementing effective tests.
+
+Initially, I misunderstood the scope and began building a full elevator logic system. After realizing the need to focus on data collection, I adjusted my approach. This project took longer than the suggested 4 hours, but it was a valuable learning experience.
+
+While I have experience with APIs, this project reinforced my understanding of API design and motivated me to further develop my skills in Flask and API development.
+
+Overall, this project was a beneficial experience. I hope my solution aligns with your expectations and demonstrates my ability to adapt and learn. Regardless of the outcome, I have gained valuable insights from tackling this real-world problem through coding.
