@@ -77,19 +77,38 @@ def test_get_calls(client, app):
         # Add some test data
         call1 = ElevatorCall(current_floor='G', destination_floor='5', is_external_call=True, elevator_at_rest=True)
         call2 = ElevatorCall(current_floor='5', destination_floor='G', is_external_call=False, elevator_at_rest=False)
-        db.session.add_all([call1, call2])
+        call3 = ElevatorCall(current_floor='2', destination_floor='3', is_external_call=True, elevator_at_rest=True)
+        db.session.add_all([call1, call2, call3])
         db.session.commit()
 
         response = client.get('/get_calls')
         assert response.status_code == 200
         data = json.loads(response.data)
-        assert len(data) == 2
+        assert len(data) == 3
 
         response = client.get('/get_calls?at_rest_only=true')
         assert response.status_code == 200
         data = json.loads(response.data)
+        assert len(data) == 2
+        assert all(call['elevator_at_rest'] for call in data)
+
+        response = client.get('/get_calls?is_external_call=true')
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert len(data) == 2
+        assert all(call['is_external_call'] for call in data)
+
+        response = client.get('/get_calls?is_external_call=false')
+        assert response.status_code == 200
+        data = json.loads(response.data)
         assert len(data) == 1
-        assert data[0]['current_floor'] == 'G'
+        assert not data[0]['is_external_call']
+
+        response = client.get('/get_calls?at_rest_only=true&is_external_call=true')
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert len(data) == 2
+        assert all(call['elevator_at_rest'] and call['is_external_call'] for call in data)
 
 
 def test_invalid_floor(client, app):
@@ -128,6 +147,55 @@ def test_outside_operational_hours(client, app):
 
         # Reset datetime to avoid affecting other tests
         app.routes.datetime = datetime
+
+def test_move_elevator(client, app):
+    with app.app_context():
+        # Initial state: elevator at rest at floor 'G'
+        initial_state = ElevatorState(current_floor='G', is_at_rest=True)
+        db.session.add(initial_state)
+        db.session.commit()
+
+        response = client.post('/move_elevator', json={
+            'destination_floor': '5'
+        })
+        assert response.status_code == 201
+        assert b"Elevator moved to destination and set to rest" in response.data
+
+        # Check that the elevator state was updated
+        state = ElevatorState.query.order_by(ElevatorState.timestamp.desc()).first()
+        assert state is not None
+        assert state.current_floor == '5'
+        assert state.is_at_rest is True
+
+
+def test_move_elevator_invalid_floor(client, app):
+    with app.app_context():
+        # Initial state: elevator at rest at floor 'G'
+        initial_state = ElevatorState(current_floor='G', is_at_rest=True)
+        db.session.add(initial_state)
+        db.session.commit()
+
+        response = client.post('/move_elevator', json={
+            'destination_floor': 'invalid'
+        })
+        assert response.status_code == 400
+        assert b"Invalid floor" in response.data
+
+
+def test_move_elevator_busy(client, app):
+    with app.app_context():
+        # Initial state: elevator busy at floor 'G'
+        initial_state = ElevatorState(current_floor='G', is_at_rest=False)
+        db.session.add(initial_state)
+        db.session.commit()
+
+        response = client.post('/move_elevator', json={
+            'destination_floor': '5'
+        })
+        assert response.status_code == 400
+        assert b"Elevator is busy" in response.data
+
+
 
 
 def test_generate_and_export_calls(client, app):

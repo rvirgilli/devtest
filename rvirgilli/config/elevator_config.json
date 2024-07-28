@@ -1,31 +1,6 @@
 {
   "building_config": {
     "floors": ["B3", "B2", "B1", "G", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
-    "default_resting_floor": "G",
-    "operational_hours": {
-      "start_time": "06:00",
-      "end_time": "22:00"
-    }
-  },
-  "floor_restrictions": {
-    "10": {
-      "start_time": "09:00",
-      "end_time": "17:00",
-      "days": ["Mon", "Tue", "Wed", "Thu", "Fri"]
-    },
-    "B2": {
-      "start_time": "08:00",
-      "end_time": "20:00",
-      "days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    }
-  },
-  "elevator_params": {
-    "max_capacity": 8,
-    "speed_floors_per_second": 0.5,
-    "door_operation_time": 5
-  },
-  "data_collection": {
-    "log_interval_seconds": 60,
-    "retain_data_days": 30
+    "default_resting_floor": "G"
   }
 }

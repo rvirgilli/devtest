@@ -1,4 +1,5 @@
-# Elevator Rest Predictor
+
+# Elevator Data Collector
 
 ## Overview
 This project is designed to collect and store meaningful data about elevator usage, specifically to feed a Machine Learning (ML) system that will try to predict the optimal resting floor for an elevator when it's not in use. 
@@ -19,6 +20,7 @@ This data structure was chosen because it captures the essential information nee
 The elevator control system will interact with our API to:
 1. Send information about new elevator calls
 2. Update the elevator's resting state
+3. Move the elevator to a destination floor
 
 The ML system can then retrieve the relevant data through our API for analysis and prediction. The key insight here is that the most valuable data for determining the optimal resting floor are the calls made when the elevator is already at rest. These calls represent instances where the elevator's current resting position either was or wasn't ideal.
 
@@ -29,9 +31,8 @@ To facilitate this, our API provides a way to filter and retrieve only the calls
 ### Business Rules
 Here are the business rules considered for this project:
 - Validation of floor numbers against the building configuration
-- Checking if calls are made within operational hours
 
-The parameters for these rules are configurable via a JSON file.
+The valid floors and the default resting floor are configurable via a JSON file.
 
 ## How to Run the System
 1. Initialize the database: `python init_db.py`
@@ -51,6 +52,7 @@ The API will be available at `http://localhost:5000`.
     "destination_floor": "string",
     "is_external_call": boolean
   }
+  ```
 - **Response**: 201 Call logged and elevator set to busy
 
 ### Set Elevator to Rest
@@ -61,6 +63,7 @@ The API will be available at `http://localhost:5000`.
   {
     "current_floor": "string"
   }
+  ```
 - **Response**: 201 Elevator set to rest
 
 ### Retrieve Calls
@@ -68,7 +71,19 @@ The API will be available at `http://localhost:5000`.
 - **Method**: GET
 - **Query Parameters**: 
   - `at_rest_only` (optional): Set to "true" to retrieve only calls made when the elevator was at rest
+  - `is_external_call` (optional): Set to "true" to retrieve only calls made from outside the elevator, or "false" to retrieve only calls made from inside the elevator
 - **Response**: 200 OK with JSON array of call data
+
+### Move Elevator
+- **URL**: `/move_elevator`
+- **Method**: POST
+- **Body**:
+  ```json
+  {
+    "destination_floor": "string"
+  }
+  ```
+- **Response**: 201 Elevator moved to destination and set to rest
 
 ## Testing
 Run all tests using the command `pytest` in the project root.
